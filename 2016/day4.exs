@@ -47,7 +47,7 @@ defmodule Day4 do
     |> Enum.filter(&real_room/1)
     |> Enum.map(fn({_, s, _}) -> s end)
     |> Enum.sum
-    |> IO.inspect
+    #|> IO.inspect
   end
 
   def part_2 do
@@ -55,7 +55,7 @@ defmodule Day4 do
     |> Enum.filter(&real_room/1)
     |> Enum.map(fn(room) -> {room, decrypt(room)} end)
     |> Enum.filter(fn({room, name}) -> String.contains?(name, "north") end)
-    |> IO.inspect
+    #|> IO.inspect
   end
 end
 
@@ -78,6 +78,10 @@ defmodule Day4Test do
 
   test "part_1" do
     assert 278221 == part_1()
+  end
+
+  test "part_2" do
+    assert [{{_, 267, _}, _}] = part_2()
   end
 
   test "decrypt" do
