@@ -26,11 +26,35 @@ defmodule Day4 do
     hash(name) == check
   end
 
+  def rotate(<<c>>, times) when c >= ?a and c <= ?z do
+    <<a, z>> = "az"
+    c = c - a
+    len = z - a + 1
+    c = rem(c + times, len)
+    <<c + a>>
+  end
+
+  def rotate(c, _), do: " "
+
+  def decrypt({name, sector, _}) do
+    String.codepoints(name)
+    |> Enum.map(fn(c) -> rotate(c, sector) end)
+    |> Enum.join
+  end
+
   def part_1 do
     load_input()
     |> Enum.filter(&real_room/1)
     |> Enum.map(fn({_, s, _}) -> s end)
     |> Enum.sum
+    |> IO.inspect
+  end
+
+  def part_2 do
+    load_input()
+    |> Enum.filter(&real_room/1)
+    |> Enum.map(fn(room) -> {room, decrypt(room)} end)
+    |> Enum.filter(fn({room, name}) -> String.contains?(name, "north") end)
     |> IO.inspect
   end
 end
@@ -54,6 +78,19 @@ defmodule Day4Test do
 
   test "part_1" do
     assert 278221 == part_1()
+  end
+
+  test "decrypt" do
+    assert decrypt({"qzmt-zixmtkozy-ivhz", 343, "????"}) == "very encrypted name"
+  end
+
+  test "rotate" do
+    assert rotate("a", 1) == "b"
+    assert rotate("a", 25) == "z"
+    assert rotate("a", 26) == "a"
+    assert rotate("a", 2) == "c"
+    assert rotate("z", 1) == "a"
+    assert rotate("z", 2) == "b"
   end
 
 end
