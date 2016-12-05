@@ -1,11 +1,13 @@
 defmodule Day5 do
   @input "ojvtpuvg"
   defmodule Crypto do
+    @prefix "00000"
+    #@prefix :binary.compile_pattern("00000")
     def hash(input, n) do
       :crypto.hash(:md5 , input <> Integer.to_string(n)) |> Base.encode16(case: :lower)
     end
 
-    def interesting("00000" <> rest), do: rest
+    def interesting(@prefix <> rest), do: rest
     def interesting(_), do: false
 
     @doc """
@@ -62,23 +64,18 @@ defmodule Day5 do
 
   def extract_indexed(enumerable) do
     enumerable
-    |> Stream.transform(%{}, fn({i, c}, acc) ->
-        {v, acc} = Map.get_and_update(acc, i, fn
-        (nil) -> {c, c}
-        (v) -> {v, v}
-      end)
-      IO.puts "i #{i} c #{c}"
-      IO.inspect acc
-      if length(Map.keys(acc)) <= 8 do
-        {[{i, v}], acc}
-      else
+    |> Enum.reduce_while(%{}, fn({i, c}, acc) ->
+      #IO.puts "i #{i} c #{c}"
+      GenServer.cast(Day5.Cinematic, {i, c})
+      acc = Map.put_new(acc, i, c)
+      if length(Map.keys(acc)) == 8 do
         {:halt, acc}
+      else
+        {:cont, acc}
       end
     end)
-    |> Stream.uniq
-    |> Stream.take(8)
+    |> Map.to_list
     |> Enum.sort
-    |> IO.inspect
     |> Enum.map(fn({_i, c}) -> c end)
     |> Enum.join
   end
@@ -96,8 +93,52 @@ defmodule Day5 do
   end
 
   def solve2 do
-    crack_indexed_flow(@input)
-    |> IO.puts
+    GenServer.start_link(Day5.Cinematic, [], name: Day5.Cinematic)
+    _result = crack_indexed(@input)
+    GenServer.cast(Day5.Cinematic, :stop)
+  end
+
+  def test_print do
+    Process.sleep(10000)
+  end
+
+  defmodule Cinematic do
+    use GenServer
+
+    def init(_) do
+      Process.send_after(self(), :tick, 0)
+      {:ok, %{}}
+    end
+
+    def handle_cast(:stop, _s) do
+      IO.write IO.ANSI.reset()
+      {:stop, :normal, :ok}
+    end
+    def handle_cast({i, c}, s) do
+      {:noreply, Map.put_new(s, i, c)}
+    end
+
+    def handle_info(:tick, s) do
+      print(s)
+      Process.send_after(self(), :tick, 50)
+      {:noreply, s}
+    end
+
+
+    def print(s) do
+      r = 32..126
+      l = for i <- 1..8, do: Map.get(s, i, nil)
+      l = Enum.map(l, fn
+        (nil) -> [IO.ANSI.normal(), IO.ANSI.faint(), Enum.random(r)]
+        (c) -> [IO.ANSI.normal(), IO.ANSI.bright(), IO.ANSI.primary_font(), c]
+      end)
+
+      IO.write  <<27, "[", "?25l">> #  CSI ?25l
+      IO.write IO.ANSI.clear_line()
+      IO.write [IO.ANSI.reverse(),  l]
+      IO.write '\r'
+    end
+
   end
 
 end
