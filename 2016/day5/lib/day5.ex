@@ -57,11 +57,18 @@ defmodule Day5 do
     |> Stream.map(fn(n) -> get_passwd_indexed(hash(input, n), n) end)
     |> Stream.filter(fn(res) -> elem(res, 0) == true end)
     |> Stream.map(fn({true, c, i, _n}) -> {i, c} end)
+    |> extract_indexed()
+  end
+
+  def extract_indexed(enumerable) do
+    enumerable
     |> Stream.transform(%{}, fn({i, c}, acc) ->
-      {v, acc} = Map.get_and_update(acc, i, fn
+        {v, acc} = Map.get_and_update(acc, i, fn
         (nil) -> {c, c}
         (v) -> {v, v}
       end)
+      IO.puts "i #{i} c #{c}"
+      IO.inspect acc
       if length(Map.keys(acc)) <= 8 do
         {[{i, v}], acc}
       else
@@ -76,8 +83,20 @@ defmodule Day5 do
     |> Enum.join
   end
 
+  def crack_indexed_flow(input) do
+    import Day5.Crypto
+    alias Experimental.Flow
+    Stream.iterate(0, &(&1+1))
+    |> Flow.from_enumerable()
+    |> Flow.map(fn(n) -> get_passwd_indexed(hash(input, n), n) end)
+    |> Flow.filter(fn(res) -> elem(res, 0) == true end)
+    |> Flow.map(fn({true, c, i, _n}) -> {i, c} end)
+    #|> Flow.partition() 
+    |> extract_indexed()
+  end
+
   def solve2 do
-    crack_indexed(@input)
+    crack_indexed_flow(@input)
     |> IO.puts
   end
 

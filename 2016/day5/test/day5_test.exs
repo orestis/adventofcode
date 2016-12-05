@@ -12,7 +12,7 @@ defmodule Day5Test do
 
   @tag timeout: 120000
   test "part2" do
-    assert crack_indexed("ojvtpuvg") == "1050cbbd"
+    assert crack_indexed_flow("ojvtpuvg") == "1050cbbd"
   end
 
   @tag skip: "too long"
