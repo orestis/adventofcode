@@ -94,7 +94,7 @@ defmodule Day5 do
 
   def solve2 do
     GenServer.start_link(Day5.Cinematic, [], name: Day5.Cinematic)
-    _result = crack_indexed(@input)
+    _result = crack_indexed_flow(@input)
     GenServer.cast(Day5.Cinematic, :stop)
   end
 
