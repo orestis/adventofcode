@@ -4,33 +4,81 @@ defmodule Day11 do
   end
 
   def puzzle_input do
-    {0, {["MT", "GP", "GS"], ["MP", "MS"], ["GQ", "MQ", "GR", "MR"], []}}
+    {0, [["GP", "GS", "GT", "MT"], ["MP", "MS"], ["GQ", "GR", "MQ", "MR"], []]}
   end
 
-  def walk(initial, curr, microchips, g) do
-    #Process.sleep(2000)
-    {curr_vertex, _label} = :digraph.vertex(g, curr)
-    IO.puts "current is #{inspect(curr)}, vertex: #{inspect(curr_vertex)}"
-    next_states = generate_new_state(curr)
-    IO.puts "next states is #{inspect(next_states)}"
-    found = Enum.any?(next_states, fn({elev, floors}) ->
-          last_floor = MapSet.new(Enum.at(floors, 3))
-          MapSet.equal?(MapSet.intersection(last_floor, microchips), microchips)
-    end)
+  def found?({elev, floors}, end_state) do
+    last_floor = MapSet.new(Enum.at(floors, 3))
+    MapSet.equal?(end_state, last_floor)
+  end
+
+  # def walk_again(possibles, end_state, seen, g) do
+  #   found = Enum.any?(possibles, fn(s) -> found?(s, end_state) end)
+  #   IO.puts "at step #{steps}, contemplating #{length(possibles)}"
+  #   if found do
+  #     IO.puts "DONE #{steps}"
+  #     steps
+  #   else
+  #     seen = Enum.reduce(possibles, seen, fn(s, acc) -> MapSet.put(acc, s) end)
+  #     next_states = Enum.flat_map(possibles, &generate_new_state/1)
+  #     Enum.each(next_states, fn(s) ->
+  #       v = :digraph.add_vertex(g, s)
+  #       :digraph.add_edge(g, curr_vertex, v) 
+  #     end)
+  #   end
+  # end
+
+  def walk(possibles, end_state, seen, steps) do
+    found = Enum.any?(possibles, fn(s) -> found?(s, end_state) end)
+    IO.puts "at step #{steps}" #, contemplating #{length(possibles)}"
     if found do
-      short_path = :digraph.get_short_path(g, initial, curr_vertex)
-      IO.puts "DONE #{inspect(short_path)}"
-      IO.puts "steps #{length(short_path)}"
-      System.halt(0)
+      IO.puts "DONE #{steps}"
+      steps
     else
+      seen = Enum.reduce(possibles, seen, fn(s, acc) -> MapSet.put(acc, s) end)
+      next_states = Stream.flat_map(possibles, &generate_new_state/1)
+      unseen_states = Stream.filter(next_states, fn(s) ->
+        not MapSet.member?(seen, s)
+      end)
+      unseen_states = Enum.sort_by(unseen_states, fn({_elev, floors}) ->
+        floors
+        |> Enum.map(&length/1)
+        |> Enum.with_index(1)
+        |> Enum.reduce(0, fn({len, fl}, acc) -> acc + len * fl * fl * fl * fl end)
+      end, &>=/2)
+      walk(unseen_states, end_state, seen, steps + 1)
+    end
+  end
+
+  def walk_graph(initial, curr, end_state, g, steps \\ 0) do
+    {curr_vertex, _label} = :digraph.vertex(g, curr)
+    if found?(curr, end_state) do
+      IO.puts "DONE #{inspect(curr)}"
+      short_path = :digraph.get_short_path(g, initial, curr_vertex)
+      #for s <- short_path, do: IO.inspect s
+      IO.puts "steps #{length(short_path) - 1} or #{steps}"
+      #System.halt(0)
+    else
+      next_states = generate_new_state(curr)
       Enum.each(next_states, fn(s) ->
-        v = :digraph.add_vertex(g, s)
-        #IO.puts "added next state #{inspect(s)}, vertex: #{inspect(v)}"
-        :digraph.add_edge(g, curr_vertex, v) 
+        v = case :digraph.vertex(g, s) do
+          false -> :digraph.add_vertex(g, s)
+          {v, _} -> v
+        end
+        unless v in :digraph.out_neighbours(g, curr_vertex) do
+          :digraph.add_edge(g, curr_vertex, v)
+        end
       end)
       neighbours = :digraph.out_neighbours(g, curr_vertex)
-      IO.puts "neighbours are #{inspect(neighbours)}"
-      Enum.each(neighbours, &(walk(initial, &1, microchips, g)))
+      #IO.puts "neighbours were #{inspect(neighbours)}"
+      neighbours = Enum.sort_by(neighbours, fn({_elev, floors}) ->
+        floors
+          |> Enum.map(&length/1)
+          |> Enum.with_index(1)
+          |> Enum.reduce(0, fn({len, fl}, acc) -> acc + len * fl * fl * fl * fl end)
+      end, &>=/2)
+      #IO.puts "neighbours are #{inspect(neighbours)}"
+      Enum.each(neighbours, fn(n) -> walk_graph(initial, n, end_state, g, steps + 1) end)
     end
   end
 
@@ -93,6 +141,27 @@ defmodule Day11 do
     p ++ pairs(t)
   end
 
+  def solve_breadth(initial) do
+    final_state = Enum.reduce(elem(initial, 1), [], fn(floor, acc) ->
+      acc ++ floor
+    end) |> MapSet.new() |> IO.inspect
+    walk([initial], final_state, MapSet.new(), 0)
+  end
+
+  def solve_graph(initial \\ puzzle_input()) do
+    g = new_graph()
+    microchips = Enum.reduce(elem(initial, 1), [], fn(floor, acc) ->
+      acc ++ floor
+    end) |> MapSet.new() |> IO.inspect
+    :digraph.add_vertex(g, initial) |> IO.inspect
+    walk_graph(initial, initial, microchips, g)
+  end
+
+
+  def test_input do
+    {0, [["MH", "ML"], ["GH"], ["GL"], []]}
+  end
+
 end
 
 ExUnit.start
@@ -115,10 +184,6 @@ defmodule Day11Test do
   The third floor contains a promethium generator, a promethium-compatible microchip, a ruthenium generator, and a ruthenium-compatible microchip.
   The fourth floor contains nothing relevant.
   """
-
-  def test_input do
-    {0, [["MH", "ML"], ["GH"], ["GL"], []]}
-  end
 
   test "newstate" do
     curr = test_input()
@@ -160,13 +225,13 @@ defmodule Day11Test do
     assert pairs([:a, :b, :c, :d]) == [[:a, :b], [:a, :c], [:a, :d], [:b, :c], [:b, :d], [:c, :d]]
   end
 
-  test "walk" do
-    g = new_graph()
-    initial = test_input()
-    microchips = Enum.reduce(elem(initial, 1), [], fn(floor, acc) ->
-      acc ++ Enum.filter(floor, & String.starts_with?(&1, "M"))
-    end) |> MapSet.new()
-    :digraph.add_vertex(g, initial) |> IO.inspect
-    walk(initial, initial, microchips, g)
+  @tag :skip
+  test "check" do
+    assert [] == generate_new_state({2, [["ML"], [], ["GH", "GL", "MH"], []]})
   end
+
+  test "sample" do
+    assert 9 == solve_breadth(test_input())
+  end
+
 end
