@@ -21,7 +21,7 @@ defmodule Day14 do
     do_md5_stretch(md5(s), repeats-1)
   end
 
-  @triple ~r/.*(\d|[a-z])\1\1.*/
+  @triple ~r/.*?(.)\1\1.*/
   def triple(n, salt), do: triple(md5(n, salt))
   def triple(s) do
     case Regex.run(@triple, s, capture: :all_but_first) do
@@ -30,7 +30,6 @@ defmodule Day14 do
     end
   end
 
-  @quintuple ~r/.*(.)\1\1\1\1.*/
   def quintuple(s, opts \\ [ets_table: nil]) do
     if t = opts[:ets_table] do
       case :ets.lookup(t, {:q, s}) do
@@ -45,10 +44,11 @@ defmodule Day14 do
     end
   end
 
+  @quintuple ~r/(.)\1\1\1\1/
   def do_quintuple(s) do
-    case Regex.run(@quintuple, s, capture: :all_but_first) do
-      [h|_t] -> h
-      _ -> nil
+    case Regex.scan(@quintuple, s, capture: :all_but_first) do
+      nil -> []
+      l -> List.flatten(l)
     end
   end
 
@@ -57,12 +57,15 @@ defmodule Day14 do
   end
 
   def key2(n, salt) do
-    if t = triple(md5_stretch(md5(n, salt))) do
+    stretched = md5_stretch(md5(n, salt))
+    if t = triple(stretched) do
+      #IO.puts "n #{n} for salt #{salt} has triple #{t}"
       Enum.reduce_while(counter(n+1), :unused, fn(idx, acc) ->
-        if idx >= (n + 1000) do
+        #IO.puts "checking idx #{idx}, md5 #{md5_stretch(md5(idx, salt))} quintuple #{do_quintuple(md5_stretch(md5(idx, salt)))}"
+        if idx > (n + 1000) do
           {:halt, false}
         else
-          if quintuple(md5_stretch(md5(idx, salt)), [ets_table: :stretch]) == t, do: {:halt, true}, else: {:cont, acc}
+          if t in quintuple(md5_stretch(md5(idx, salt)), ets_table: :stretch), do: {:halt, true}, else: {:cont, acc}
         end
       end)
     else
@@ -73,10 +76,10 @@ defmodule Day14 do
   def key(n, salt) do
     if t = triple(n, salt) do
       Enum.reduce_while(counter(n+1), :unused, fn(idx, acc) ->
-        if idx >= (n + 1000) do
+        if idx > (n + 1000) do
           {:halt, false}
         else
-          if quintuple(md5(idx, salt)) == t, do: {:halt, true}, else: {:cont, acc}
+          if t in quintuple(md5(idx, salt)), do: {:halt, true}, else: {:cont, acc}
         end
         end)
     else
@@ -89,18 +92,18 @@ defmodule Day14 do
     |> Stream.map(& {keyfun.(&1, salt), &1})
     |> Stream.filter(fn({iskey, _n}) -> iskey end)
     |> Stream.map(fn({_true, n}) -> IO.puts "key #{n}"; n end)
-    |> Enum.take(65)
+    |> Enum.take(64)
     |> Enum.at(-1)
   end
 
 end
 
 ExUnit.start
-:crypto.start
-:observer.start
+#:crypto.start
+#:observer.start
 
 defmodule Day14Test do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   @moduletag timeout: 12000000
   import Day14
   @doc """
@@ -120,62 +123,68 @@ defmodule Day14Test do
 
   @salt "abc"
 
-  test "triple" do
-    assert "a" == triple("baaac")
-    assert "a" == triple("baaaa")
-    assert "8" == triple(18, @salt)
-    assert "e" == triple(39, @salt)
-    assert "9" == triple(92, @salt)
-    assert triple(22728, @salt) != nil
+  describe "low level" do
+    test "triple" do
+      assert "a" == triple("baaac")
+      assert "a" == triple("baaaa")
+      assert "8" == triple(18, @salt)
+      assert "e" == triple(39, @salt)
+      assert "9" == triple(92, @salt)
+      assert "1" == triple(md5(8232, @salt))
+      assert triple(22728, @salt) != nil
+    end
+
+    test "quintuple" do
+      assert ["e"] == quintuple(md5(816, @salt))
+      assert ["9"] == quintuple(md5(200, @salt))
+    end
+
+    test "key" do
+      assert true == key(8232, @salt)
+      assert false == key(18, @salt)
+      assert false == key(19, @salt)
+      assert true == key(39, @salt)
+      assert true == key(92, @salt)
+      assert true == key(22728, @salt)
+    end
+
+    test "key 2" do
+      :ets.new(:stretch, [:named_table])
+      assert ["e"] == do_quintuple("eaa5c17bec47565b98275b404eeeeea6")
+      assert ["e"] == quintuple("eaa5c17bec47565b98275b404eeeeea6" , ets_table: :stretch)
+      assert false == key2(5, @salt)
+      assert true == key2(10, @salt)
+      assert true == key2(22551, @salt)
+      :ets.delete(:stretch)
+    end
   end
 
-  test "quintuple" do
-    assert "e" == quintuple(md5(816, @salt))
-    assert "9" == quintuple(md5(200, @salt))
-  end
+  describe "high level" do
+    test "64th key" do
+      assert 22728 == solve(@salt)
+    end
 
-  @tag :skip
-  test "key" do
-    assert false == key(18, @salt)
-    assert false == key(19, @salt)
-    assert true == key(39, @salt)
-    assert true == key(92, @salt)
-    assert true == key(22728, @salt)
-  end
+    test "64th key 2" do
+      :ets.new(:stretch, [:named_table])
+      assert 20864 == solve("qzyelonm", &key2/2)
+      :ets.delete(:stretch)
+    end
 
-  @tag :skip
-  test "key 2" do
-    :ets.new(:stretch, [:named_table])
-    assert false == key2(5, @salt)
-    assert true == key2(10, @salt)
-    assert true == key2(22551, @salt)
-  end
+    test "64th key 2 test" do
+      :ets.new(:stretch, [:named_table])
+      assert 22551 == solve(@salt, &key2/2)
+      :ets.delete(:stretch)
+    end
 
-  @tag :skip
-  test "64th key" do
-    assert 22728 == solve(@salt)
-  end
+    test "md5 stretch" do
+      :ets.new(:stretch, [:named_table])
+      assert "a107ff634856bb300138cac6568c0f24" == md5_stretch(md5("abc0"))
+      assert "a107ff634856bb300138cac6568c0f24" == md5_stretch(md5("abc0"))
+      :ets.delete(:stretch)
+    end
 
-  test "64th key 2" do
-    :ets.new(:stretch, [:named_table])
-    assert 22122 == solve("qzyelonm", &key2/2)
-  end
-
-  @tag :skip
-  test "64th key 2 test" do
-    :ets.new(:stretch, [:named_table])
-    assert 22551 == solve("qzyelonm", &key2/2)
-  end
-
-  @tag :skip
-  test "md5 stretch" do
-    :ets.new(:stretch, [:named_table])
-    assert "a107ff634856bb300138cac6568c0f24" == md5_stretch(md5("abc0"))
-    assert "a107ff634856bb300138cac6568c0f24" == md5_stretch(md5("abc0"))
-  end
-
-  @tag :skip
-  test "64th key actual" do
-    assert 15168 == solve("qzyelonm")
+    test "64th key actual" do
+      assert 15168 == solve("qzyelonm")
+    end
   end
 end
