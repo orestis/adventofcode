@@ -2,7 +2,7 @@ defmodule Day11 do
 
   def solve() do
     floors = [
-      [{:gen, :p}, {:gen, :s}, {:gen, :t}, {:chip, :t}],
+      [{:gen, :p}, {:gen, :s}, {:gen, :t}, {:chip, :t}, {:gen, :a}, {:gen, :b}, {:chip, :a}, {:chip, :b}],
       [{:chip, :p}, {:chip, :s}],
       [{:gen, :q}, {:gen, :r}, {:chip, :q}, {:chip, :r}],
       []
