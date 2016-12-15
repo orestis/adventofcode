@@ -13,13 +13,39 @@ defmodule State do
 
       gens == 0 or unprotected == 0
     end
+
+    @doc ~S"""
+    iex> State.Floor.passengers(1+2+8, [1, 2, 4, 8, 1+2, 1+4, 2+8, 4+8])
+    [1, 2, 8, 1+2, 2+8]
+    """
+    def passengers(floor, possible_pairs) do
+      for p <- possible_pairs, (p &&& floor) == p, do: p
+    end
+  end
+
+  def hash({elev, floors}, chip_list, gen_list) do
+    # current repr
+    # {0, [1+2, 4, 8, 0]}
+    # equivalent to repr
+    # {0, [2+1, 8, 4, 0]
+    # another:
+    # {1, [0, 1+4, 2+8, 0]
+    # equivalent to
+    # {1, [0, 2+8, 1+4, 0]
+    # bigger:
+    # {2, [1+8, 2+4, 16+32, 0]
+    # equiv =>
+    # {2, [2+16, 1+4, 8+32, 0]
+    # {2, [4+32, 1+2, 8+1632, 0]
+
+    #leave it for now
   end
 
   defstruct elevator: 0, floors: [0, 0, 0, 0]
 
   @doc ~S"""
     iex> floors = [[{:chip, :h}, {:chip, :l}], [{:gen, :h}], [{:gen, :l}], []]
-    iex> {floors, full_floor, validator} = State.create_floors(floors)
+    iex> {floors, full_floor, validator, pass_generator} = State.create_floors(floors)
     iex> floors
     [1+2, 4, 8, 0]
     iex> full_floor
@@ -34,6 +60,8 @@ defmodule State do
     true
     iex> validator.(4+8)
     true
+    iex> pass_generator.(1+2+8)
+    [1+2, 2+8, 1, 2, 8]
   """
   def create_floors(floors) do
     all_elements =
@@ -48,8 +76,11 @@ defmodule State do
       |> Enum.map(fn({el, idx}) -> {el, 1 <<< idx} end)
       |> Map.new()
 
-    all_chips = Enum.sum(Map.values(el_to_number))
-    full_floor = all_chips + (all_chips <<< gen_shift)
+    chips_list = Map.values(el_to_number)
+    gens_list = Enum.map(chips_list, &(&1 <<< gen_shift))
+
+    full_floor = Enum.sum(chips_list) + Enum.sum(gens_list)
+
 
     floors =
       Enum.map(floors, fn(floor) ->
@@ -64,7 +95,45 @@ defmodule State do
       Floor.valid?(floor, gen_shift, full_floor)
     end
 
-    {floors, full_floor, validator}
+    possible_pairs = pairs(chips_list ++ gens_list) |> Enum.map(&Enum.sum/1) |> Enum.filter(validator)
+
+    pass_generator = fn(floor) ->
+      Floor.passengers(floor, possible_pairs ++ chips_list ++ gens_list)
+    end
+
+    {floors, full_floor, validator, pass_generator}
+  end
+
+  def get_next_state({elev, floors}, pass_generator, validator) do
+    curr_floor = Enum.at(floors, elev)
+    next_positions = cond do
+      elev == 0 -> [1]
+      elev == 3 -> [2]
+      :else -> [elev+1, elev-1]
+    end
+
+    new_floors =
+      for pass <- pass_generator.(curr_floor),
+        p <- next_positions,
+        floor = Enum.at(floors, p) + pass,
+        new_curr = curr_floor - pass,
+        validator.(floor) and validator.(new_curr) do
+                                {p, floor, new_curr}
+      end
+
+    Enum.map(new_floors, fn({p, floor, new_curr}) ->
+      new_floors =
+        List.replace_at(floors, elev, new_curr)
+        |> List.replace_at(p, floor)
+      {p, new_floors}
+    end)
+  end
+
+  def pairs([]), do: []
+  def pairs([_]), do: []
+  def pairs([h|t]) do
+    p = for e <- t, do: [h, e]
+    p ++ pairs(t)
   end
 
 end
