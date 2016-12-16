@@ -103,8 +103,11 @@ defmodule Day16 do
     a ++ [?0|b]
   end
 
-  def checksum(a) do
-    check = 
+  def checksum(a), do: checksum(a, length(a))
+
+  def checksum(a, l) do
+    IO.puts "checksum of size #{l}"
+    check =
       Enum.chunk(a, 2)
       |> Enum.map(fn
         ('00') -> ?1
@@ -113,8 +116,9 @@ defmodule Day16 do
         ('10') -> ?0
         end)
 
-    if rem(length(check), 2) == 0 do
-      checksum(check)
+    l = round(l/2)
+    if rem(l, 2) == 0 do
+      checksum(check, l)
     else
       check
     end
@@ -125,14 +129,17 @@ defmodule Day16 do
   end
 
   def solve(input, disk_size) do
-    l = length(input)
-    IO.puts "size #{l}/#{disk_size}"
-    if l < disk_size do
-      solve(dragon(input), disk_size)
-    else
-      t = trunc(input, disk_size)
-      checksum(t)
-    end
+    solve(input, length(input), disk_size)
+  end
+
+  def solve(input, curr_size, disk_size) when curr_size < disk_size do
+    IO.puts "size #{curr_size}/#{disk_size}"
+    solve(dragon(input), curr_size * 2 + 1, disk_size)
+  end
+
+  def solve(input, _curr_size, disk_size) do
+    t = trunc(input, disk_size)
+    checksum(t, disk_size)
   end
 
 
@@ -194,7 +201,6 @@ defmodule Day16Test do
     assert sol == nil
   end
 
-  @tag timeout: 1200000000
   test "part 2" do
     sol = solve(c("01111010110010011"), 35651584)
     IO.puts "SOLLLLLLLLLLLLUTION"
