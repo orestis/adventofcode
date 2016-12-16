@@ -1,4 +1,4 @@
-defmodule Day16 do
+defmodule Day16Bitwise do
   use Bitwise
   @input "01111010110010011"
 
@@ -86,6 +86,58 @@ defmodule Day16 do
   end
 end
 
+defmodule Day16 do
+  def c(input), do: String.to_charlist(input)
+
+  def reverse(a), do: :lists.reverse(a)
+
+  def flip_reverse(a) do
+    Enum.reduce(a, [], fn
+      (?0, l) -> [?1|l]
+      (?1, l) -> [?0|l]
+    end)
+  end
+
+  def dragon(a) do
+    b = flip_reverse(a)
+    a ++ [?0|b]
+  end
+
+  def checksum(a) do
+    check = 
+      Enum.chunk(a, 2)
+      |> Enum.map(fn
+        ('00') -> ?1
+        ('11') -> ?1
+        ('01') -> ?0
+        ('10') -> ?0
+        end)
+
+    if rem(length(check), 2) == 0 do
+      checksum(check)
+    else
+      check
+    end
+  end
+
+  def trunc(a, l) do
+    Enum.take(a, l)
+  end
+
+  def solve(input, disk_size) do
+    l = length(input)
+    IO.puts "size #{l}/#{disk_size}"
+    if l < disk_size do
+      solve(dragon(input), disk_size)
+    else
+      t = trunc(input, disk_size)
+      checksum(t)
+    end
+  end
+
+
+end
+
 ExUnit.start
 
 defmodule Day16Test do
@@ -98,12 +150,17 @@ defmodule Day16Test do
   end
 
   test "pairs" do
-    assert pairs(c("110010110100")) == [0b11, 0b00, 0b10, 0b11, 0b01, 0b00]
+    alias Day16Bitwise, as: DB
+    assert DB.pairs(DB.c("110010110100")) == [0b11, 0b00, 0b10, 0b11, 0b01, 0b00]
+  end
+
+  test "bits" do
+    import Day16Bitwise
+    assert swap_bits(0b1000, 0, 3) == 0b0001
+    assert swap_bits(0b1001, 0, 3) == 0b1001
   end
 
   test "reverse" do
-    assert swap_bits(0b1000, 0, 3) == 0b0001
-    assert swap_bits(0b1001, 0, 3) == 0b1001
     assert reverse(c("100")) == c("001")
     assert reverse(c("001")) == c("100")
     assert reverse(c("010")) == c("010")
@@ -133,7 +190,7 @@ defmodule Day16Test do
   test "puzzle input" do
     sol = solve(c("01111010110010011"), 272)
     IO.puts "SOLLLLLLLLLLLLUTION"
-    pretty(sol)
+    IO.inspect(sol)
     assert sol == nil
   end
 
@@ -141,7 +198,7 @@ defmodule Day16Test do
   test "part 2" do
     sol = solve(c("01111010110010011"), 35651584)
     IO.puts "SOLLLLLLLLLLLLUTION"
-    pretty(sol)
+    IO.inspect(sol)
     assert sol == nil
   end
 end
