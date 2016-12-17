@@ -13,7 +13,7 @@ defmodule Day17 do
 
   @doors [?U, ?D, ?L, ?R]
   def doors(password, path) do
-    h = :crypto.hash(:md5, password ++ path)
+    h = :crypto.hash(:md5, [password, path])
     <<a::4, b::4, c::4, d::4, _rest::binary>> = h
     Enum.zip(@doors, [a, b, c, d])
     |> Enum.filter(fn({_d, x}) -> x > 10 end)
@@ -56,7 +56,7 @@ defmodule Day17 do
     exhaust_bfs([state], [], get_next, end_check, 0, [])
     |> Enum.sort_by(fn({{3, 3}, _, path}) -> length(path) end, &>=/2)
     |> Enum.take(1)
-    |> Enum.map(fn({_, _, path})-> length(path) end)
+    |> Enum.map(fn({_, _, path})-> IO.iodata_length(path) end)
     |> Enum.at(0)
   end
 
@@ -65,7 +65,7 @@ defmodule Day17 do
   def move({pos, password, path}) do
     possible_doors = doors(password, path) |> Enum.filter(&(valid_move(pos, &1)))
     next_states = Enum.map(possible_doors, fn(d) ->
-      {go(pos, d), password, path ++ [d]}
+      {go(pos, d), password, [path, d]}
       end)
     next_states
   end
@@ -115,6 +115,7 @@ defmodule Day17Test do
   @puzzle_input 'mmsxrhfx'
   import Day17
 
+  @tag :skip
   test "get doors" do
     assert doors('hijkl', '') == [?U, ?D, ?L]
     assert doors('hijkl', 'D') == [?U, ?L, ?R]
@@ -123,19 +124,22 @@ defmodule Day17Test do
     assert doors('hijkl', 'DUR') == []
   end
 
+  @tag :skip
   test "shortest" do
     {{3, 3}, _pass, path} = shortest('ihgpwlah')
-    assert path == 'DDRRRD'
+    assert IO.iodata_to_binary(path) == "DDRRRD"
   end
 
+  @tag :skip
   test "shortest 2" do
     {{3, 3}, _pass, path} = shortest('kglvqrro')
-    assert path == 'DDUDRLRRUDRD'
+    assert IO.iodata_to_binary(path) == "DDUDRLRRUDRD"
   end
 
+  @tag :skip
   test "shortest 3" do
     {{3, 3}, _pass, path} = shortest('ulqzkmiv')
-    assert path == 'DRURDRUDDLLDLUURRDULRLDUUDDDRR'
+    assert IO.iodata_to_binary(path) == "DRURDRUDDLLDLUURRDULRLDUUDDDRR"
   end
 
   @tag :skip
@@ -147,7 +151,6 @@ defmodule Day17Test do
   test "longest 2" do
     assert 492 == longest('kglvqrro')
   end
-
   @tag :skip
   test "longest 3" do
     assert 830 == longest('ulqzkmiv')
