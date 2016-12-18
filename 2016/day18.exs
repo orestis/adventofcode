@@ -32,11 +32,13 @@ defmodule Day18 do
   def trap_or_safe(_), do: ?.
 
   def solve(input, rows) do
-    Enum.reduce(1..(rows-1), [input], fn(i, [row|rest]) ->
-      [next(row), row | rest]
+    counter = fn(row) -> Enum.count(row, &(&1 == ?.)) end
+    Enum.reduce(1..(rows-1), {input, counter.(input)}, fn(_, {row, c}) ->
+      n = next(row)
+      c = c + counter.(n)
+      {n, c}
     end)
-    |> Enum.map(fn(row) -> Enum.count(row, &(&1 == ?.)) end)
-    |> Enum.sum()
+    |> elem(1)
   end
 end
 
