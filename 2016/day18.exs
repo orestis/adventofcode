@@ -71,10 +71,8 @@ defmodule Day18Test do
 
 
   for {[c, n], idx} <- Enum.with_index(Enum.chunk(input, 2, 1)) do
-    @c c
-    @n n
     test "sample #{idx}" do
-      assert next(@c) == @n
+      assert next(unquote(c)) == unquote(n)
     end
   end
 
