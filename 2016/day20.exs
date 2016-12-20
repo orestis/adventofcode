@@ -66,27 +66,6 @@ defmodule Day20 do
     end
   end
 
-  def contains?(r1, r2) do
-    r1.first <= r2.first and r1.last >= r2.last
-  end
-
-
-  def combine(r1, r2) do
-    cond do
-      contains?(r1, r2) -> r1
-      contains?(r2, r1) -> r2
-      :else -> cond do
-          r1.last + 1 >= r2.first and r1.first <= r2.last -> r1.first..r2.last
-          r2.last + 1 >= r1.first and r2.first <= r1.last -> r2.first..r1.last
-          :else -> false
-        end
-    end
-  end
-
-  def merge(ranges) do
-    ranges
-  end
-
 end
 
 ExUnit.start
@@ -106,39 +85,8 @@ defmodule Day20Test do
     assert parse("0-7\n1-3") == [0..7, 1..3]
   end
 
-  @tag :skip
-  test "merge" do
-    assert merge([0..2, 4..7, 5..8]) == [0..2, 4..8]
-    assert merge([0..7, 1..3]) == [0..7]
-  end
-
-  test "combine" do
-    assert combine(0..7, 0..3) == 0..7
-    assert combine(0..3, 0..7) == 0..7
-    assert combine(0..7, 1..3) == 0..7
-    assert combine(1..3, 0..7) == 0..7
-    assert combine(0..3, 3..7) == 0..7
-    assert combine(1..5, 3..7) == 1..7
-    assert combine(1..2, 3..7) == 1..7
-    assert combine(1..2, 4..7) == false
-  end
-
-  test "contains" do
-    assert contains?(0..7, 0..3) == true
-    assert contains?(0..7, 0..7) == true
-    assert contains?(0..7, 1..5) == true
-    assert contains?(0..7, 1..7) == true
-    assert contains?(2..5, 1..7) == false
-    assert contains?(2..5, 0..3) == false
-    assert contains?(2..5, 3..6) == false
-  end
-
   test "sample" do
     assert lowest(parse(@sample_input)) == 3
-  end
-
-  test "kind of input" do
-    #ranges = parse(File.read!("day20.txt"))
   end
 
   @tag :skip
