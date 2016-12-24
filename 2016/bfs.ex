@@ -1,22 +1,28 @@
 defmodule BFS do
+  @verbose false
+  defmacro debug(body) do
+    if @verbose do
+      body
+    end
+  end
   def walk_bfs(start, get_next, end_check) do
     seen = MapSet.new()
     steps = 0
     walk_bfs([start], [], get_next, end_check, seen, steps)
   end
 
-  def walk_bfs([], [], _get_next, _end_check, _seen, steps) do
-    IO.puts "giving up at steps #{steps}"
+  def walk_bfs([], [], _get_next, _end_check, _seen, _steps) do
+    debug IO.puts "giving up at steps #{_steps}"
     -1
   end
   def walk_bfs([], nq, get_next, end_check, seen, steps) do
-    IO.puts ">>exhausted depth #{steps}, going deeper, next check: #{length(nq)} nodes<<"
-    IO.puts "have seen so far #{MapSet.size(seen)}"
+    debug IO.puts ">>exhausted depth #{steps}, going deeper, next check: #{length(nq)} nodes<<"
+    debug IO.puts "have seen so far #{MapSet.size(seen)}"
       walk_bfs(nq, [], get_next, end_check, seen, steps+1)
   end
   def walk_bfs([curr|rest], nq, get_next, end_check, seen, steps) do
     if end_check.(curr) do
-      IO.puts "FOUND #{inspect(curr)} at steps #{steps}"
+      debug IO.puts "FOUND #{inspect(curr)} at steps #{steps}"
       steps
     else
       if not MapSet.member?(seen, curr) do
