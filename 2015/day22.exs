@@ -65,27 +65,32 @@ defmodule Day22 do
   end
 
   def apply_effects(player, boss, effects) do
-    player = if effects[:shield], do: Keyword.put(player, :armor, 7), else: Keyword.put(player, :armor, 0)
-    player = if effects[:recharge], do: mana(player, 101), else: player
-    boss = if effects[:poison], do: health(boss, -3), else: boss
+    player = if effects[:shield] != nil, do: Keyword.put(player, :armor, 7), else: Keyword.put(player, :armor, 0)
+    player = if effects[:recharge] != nil, do: mana(player, 101), else: player
+    boss = if effects[:poison] != nil, do: health(boss, -3), else: boss
     effects = Enum.reduce(Keyword.keys(effects), effects, fn(key, effects) ->
       {_, effects} = Keyword.get_and_update(effects, key, fn(duration) ->
-        if duration > 0, do: {duration, duration - 1}, else: :pop
+        if duration > 1, do: {duration, duration - 1}, else: :pop
       end)
       effects
     end)
     {player, boss, effects}
   end
 
+
   def turn(:player, player, boss, effects) do
-    {player, boss, effects} = apply_effects(player, boss, effects)
-    # player casts spell - or loses
-    valid_spells = Enum.filter(spells(), fn({spell, cost}) -> cost <= player[:mana] and not Keyword.has_key?(effects, spell) end)
-    next_states = Enum.map(valid_spells, fn({spell_name, _}) -> spell(spell_name, player, boss, effects) end)
-    if length(next_states) > 0 do
-      next_states |> Enum.map(fn(state) -> Tuple.insert_at(state, 0, :boss) end)
-    else
+    player = health(player, player[:rot])
+    if player[:hp] <= 0 do
       [{:lose, player, boss, effects}]
+    else
+      {player, boss, effects} = apply_effects(player, boss, effects)
+      valid_spells = Enum.filter(spells(), fn({spell, cost}) -> cost <= player[:mana] and not Keyword.has_key?(effects, spell) end)
+      next_states = Enum.map(valid_spells, fn({spell_name, _}) -> spell(spell_name, player, boss, effects) end)
+      if length(next_states) > 0 do
+        next_states |> Enum.map(fn(state) -> Tuple.insert_at(state, 0, :boss) end)
+      else
+        [{:lose, player, boss, effects}]
+      end
     end
   end
 
@@ -108,7 +113,7 @@ defmodule Day22 do
   end
 
   test "example 1" do
-    player = [hp: 10, mana: 250, armor: 0, spent: 0]
+    player = [hp: 10, mana: 250, armor: 0, spent: 0, rot: 0]
     boss = [hp: 13, damage: 8, armor: 0]
     {player, boss, effects} = spell(:poison, player, boss, [])
     assert player[:mana] == 77
@@ -141,37 +146,76 @@ defmodule Day22 do
     assert player[:hp] == 2
   end
 
-  def play(states, wins) do
+  def print_game(game) do
+    IO.puts "GAMEEEEEEEEEEEEEEEEE"
+    for {t, player, boss, effects} <- game do
+      if t == :player, do: IO.puts " -- Player Turn --"
+      if t == :boss, do: IO.puts " -- Boss Turn -- "
+      if t == :win, do: IO.puts "!!!!!!Player Wins"
+      if t == :lose, do: IO.puts "........Player Loses"
+      IO.puts "Player has #{player[:hp]} hit points, #{player[:armor]} armor, #{player[:mana]} mana"
+      IO.puts "Boss has #{boss[:hp]} hit points \t\t Player has spent #{player[:spent]} mana so far"
+      IO.puts "Effects are #{inspect effects}"
+    end
+    IO.puts "!@@@@@@@@@@@@@############@@@@@@@@@@#$$$$$$$$$$$$$$$"
+  end
+
+  def play(states, wins, previous) do
     Enum.reduce(states, wins, fn(state, wins) ->
       case state do
         {:win, player, _, _} ->
+          s = [state|previous] |> Enum.reverse() |> print_game()
           [player[:spent]|wins] |> Enum.sort()
         {:lose, _, _, _} -> wins
         other when length(wins) == 0 ->
           next_states = apply(__MODULE__, :turn, Tuple.to_list(other))
-          play(next_states, wins)
+          #IO.puts "after state #{inspect state}, next #{inspect next_states}"
+          play(next_states, wins, [state|previous])
         {_, player, _, _} = other ->
           min_win = hd(wins)
           if player[:spent] >= min_win do
             wins
           else
             next_states = apply(__MODULE__, :turn, Tuple.to_list(other))
-            play(next_states, wins)
+            #IO.puts "after state #{inspect state}, next #{inspect next_states}"
+            play(next_states, wins, [state|previous])
           end
       end
     end)
   end
 
-  def solve() do
-    player = [hp: 50, mana: 500, armor: 0, spent: 0]
+  def solve(rot \\ 0) do
+    player = [hp: 50, mana: 500, armor: 0, spent: 0, rot: rot]
     boss = @boss
-    wins = play([{:player, player, boss, []}], [])
+    wins = play([{:player, player, boss, []}], [], [])
     Enum.sort(wins)
     |> IO.inspect
     |> Enum.at(0)
   end
 
+  @tag :skip
   test "part 1" do
-    assert solve() == -1
+    assert solve() == 900
+  end
+
+  test "rot" do
+    player = [hp: 10, mana: 60, armor: 0, spent: 0, rot: -1]
+    [{:boss, player, _boss, _effects}] = turn(:player, player, @boss, [])
+    assert player[:hp] == 9
+    player = [hp: 1, mana: 60, armor: 0, spent: 0, rot: -1]
+    [{:lose, _player, _boss, _effects}] = turn(:player, player, @boss, [])
+  end
+
+  test "part 2" do
+    assert solve(-1) == -1
+  end
+
+  test "effects?" do
+    player = [hp: 10, mana: 60, armor: 0, spent: 0, rot: -1]
+    boss = [hp: 10, armor: 0, damage: 8]
+    effects = [poison: 1]
+    {player, boss, effects} = apply_effects(player, boss, effects)
+    assert boss[:hp] == 7
+    assert effects[:poison] == nil
   end
 end
