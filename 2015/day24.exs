@@ -34,7 +34,7 @@ defmodule Day24 do
 
   @test_numbers [1, 2, 3, 4, 5, 7, 8, 9, 10, 11]
 
-  def solve(numbers) do
+  def solve_naive(numbers) do
     # first, get all the possible ways you can divide the weights into 3:
     combs = groups(numbers, 3)
     IO.puts "combs"
@@ -48,6 +48,33 @@ defmodule Day24 do
     smallest = Enum.chunk_by(valid, &length/1) |> hd()
     less_qe = Enum.sort_by(smallest, &qe/1) |> hd() |> qe()
   end
+
+  def solve(numbers, parts \\ 3) do
+    target = round(Enum.sum(numbers) / parts)
+    numbers = Enum.sort(numbers) |> Enum.reverse()
+    {_, min_count} = Enum.reduce_while(numbers, {0, 0}, fn(n, {sum, count}) ->
+      cond do
+        sum < target -> {:cont, {sum + n, count + 1}}
+        true -> {:halt, {sum, count}}
+      end
+    end)
+    fewer_packages =
+      Stream.iterate(min_count, &(&1 + 1))
+      |> Stream.map(fn(count) -> Combination.combine(numbers, count) end)
+      |> Stream.map(fn(combinations) ->
+        Enum.filter(combinations, &(Enum.sum(&1) == target))
+      end)
+      |> Stream.filter(fn(valid_combinations) -> length(valid_combinations) > 0 end)
+      |> Enum.take(1)
+      |> hd()
+
+    fewer_packages
+    |> Enum.map(&qe/1)
+    |> Enum.sort()
+    |> hd()
+  end
+
+
 
   def qe(numbers) do
     Enum.reduce(numbers, 1, &(&1 * &2))
@@ -147,9 +174,17 @@ defmodule Day24 do
     assert solve(@test_numbers) == 99
   end
 
-  @tag timeout: 60_000_000
+  test "sample 2" do
+    assert solve(@test_numbers, 4) == 44
+  end
+
+  @tag :skip
   test "part 1" do
     assert solve(@numbers) == -1
+  end
+
+  test "part 2" do
+    assert solve(@numbers, 4) == -1
   end
 
 
