@@ -1,6 +1,6 @@
 ExUnit.start
 defmodule Day24 do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   @numbers ~w(1
             2
@@ -34,31 +34,42 @@ defmodule Day24 do
 
   @test_numbers [1, 2, 3, 4, 5, 7, 8, 9, 10, 11]
 
+  def solve(numbers) do
+    # first, get all the possible ways you can divide the weights into 3:
+    combs = groups(numbers, 3)
+    IO.puts "combs"
+    # then, for each combination, ensure that we can combine the rest into 2
+    valid =
+      for c <- combs, subcomps = groups(numbers -- c, 2), subcomps != [], do: c
 
+    IO.puts "valid"
 
-  # less naive approach
-  # generate all permutations of numbers, such as the first numbers produce target weight
-  # sort these permutations and filter by uniq
-  # group by the number of elements and sort fewer -> more
-  # for each list in group, get the difference and repeat with new target weight
-  # if it is not possible to group rest into 2, discard the parent list
-  # continue until we finish a group
-  # calculate the QE for the group -> sort by less QE -> done
-
-  def groups(numbers) do
-    sum = round(Enum.sum(numbers) / 3)
-    groups(0, numbers, sum)
-    |> flatten()
+    valid = Enum.sort(valid) |> Enum.reverse()
+    smallest = Enum.chunk_by(valid, &length/1) |> hd()
+    less_qe = Enum.sort_by(smallest, &qe/1) |> hd() |> qe()
   end
 
-  def groups(n, numbers, sum) when sum == 0 do
+  def qe(numbers) do
+    Enum.reduce(numbers, 1, &(&1 * &2))
+  end
+
+  def groups(numbers, parts) do
+    sum = round(Enum.sum(numbers) / parts)
+    #IO.puts "must divide #{insp numbers}, total #{Enum.sum(numbers)} into #{parts} parts of #{sum} weight"
+    case groups(0, MapSet.new(numbers), sum) do
+      nil -> []
+      other -> flatten(other)
+    end
+  end
+
+  def groups(n, _numbers, sum) when sum == 0 do
     #IO.puts "n #{n}, sum #{sum}, numbers #{inspect(numbers, charlists: :as_lists)}"
     {n, []}
   end
-  def groups(n, numbers, sum) when sum < 0, do: nil
   def groups(n, numbers, sum) do
     #IO.puts "n #{n}, sum #{sum} numbers #{inspect(numbers,charlists: :as_lists)}"
-    combs = for i <- numbers, g = groups(i, numbers -- [i], sum - i), g != nil, g != [], do: g
+    combs = for i <- numbers, i <= sum, do: groups(i, MapSet.delete(numbers, i), sum - i)
+    combs = Enum.reject(combs, fn(c) -> c == nil end)
     if combs != [] do
       {n, combs}
     else
@@ -94,25 +105,7 @@ defmodule Day24 do
   def flatten_tree([]), do: []
   def flatten_tree(n), do: [n]
 
-  def solve(numbers) do
-    target = round(Enum.sum(numbers) / 3)
-    perms = Combination.permutate(numbers, &(valid_start(&1, target)))
-    starts =
-      Enum.map(perms, fn(n) -> Enum.take(n, valid_start(n, target)) |> Enum.sort() end)
-      |> Enum.uniq()
-      |> Enum.sort()
-      |> IO.inspect
-  end
 
-  def valid_start(numbers, target_weight) do
-    Enum.reduce_while(numbers, {0, 0}, fn(n, {sum, count}) ->
-      cond do
-        sum < target_weight -> {:cont, {sum+n, count+1}}
-        sum == target_weight -> {:halt, count}
-        sum > target_weight -> {:halt, false}
-      end
-    end)
-  end
 
   test "flatten" do
     assert flatten({4, [{10, []}]}) == [[4, 10]]
@@ -130,19 +123,33 @@ defmodule Day24 do
   end
 
   test "groups 2" do
-    assert groups(4, [5, 6, 7, 8, 9, 10, 11], 10) == {4, [{10, []}]}
-    assert groups(3, [4, 5, 6, 7, 8, 9, 10, 11], 14) |> flatten() == [[3, 4, 10], [3, 5, 9], [3, 6, 8]]
-    assert groups(2, [3, 4, 5, 6, 7, 8, 9, 10, 11], 17) |> flatten() == [[2, 3, 4, 10], [2, 3, 5, 9], [2, 3, 6, 8], [2, 4, 5, 8], [2, 4, 6, 7], [2, 6, 11], [2, 7, 10], [2, 8, 9]]
+    assert groups(4, MapSet.new([5, 6, 7, 8, 9, 10, 11]), 10) == {4, [{10, []}]}
+    assert groups(3, MapSet.new([4, 5, 6, 7, 8, 9, 10, 11]), 14) |> flatten() == [[3, 4, 10], [3, 5, 9], [3, 6, 8]]
+    assert groups(2, MapSet.new([3, 4, 5, 6, 7, 8, 9, 10, 11]), 17) |> flatten() == [[2, 3, 4, 10], [2, 3, 5, 9], [2, 3, 6, 8], [2, 4, 5, 8], [2, 4, 6, 7], [2, 6, 11], [2, 7, 10], [2, 8, 9]]
     #assert groups(@test_numbers, 20) == nil
   end
 
+  @tag :skip
   test "groups" do
-    assert groups([1, 2, 3, 4, 5]) == [[1, 4], [2, 3], [5]]
+    assert groups([1, 2, 3, 4, 5], 3) == [[1, 4], [2, 3], [5]]
+  end
+
+  test "invalid groups" do
+    assert groups(@test_numbers -- [1, 2, 3, 5, 9], 2) == []
   end
 
   @tag :skip
   test "groups2" do
-    assert groups(@test_numbers) == [[9, 11], [5, 7, 8], [10, 1, 2, 3, 4]]
+    assert groups(@test_numbers, 3) == [[9, 11], [5, 7, 8], [10, 1, 2, 3, 4]]
+  end
+
+  test "sample" do
+    assert solve(@test_numbers) == 99
+  end
+
+  @tag timeout: 60_000_000
+  test "part 1" do
+    assert solve(@numbers) == -1
   end
 
 
