@@ -7,15 +7,22 @@
   (if (= c \() (inc floor) (dec floor))
   )
 
-
-
-
-
+(defn direction [c]
+  (if (= c \() 1 -1))
 
 (defn f2015-1a [floor r]
   (if (seq r)
     (recur (move floor (first r)) (rest r))
     floor))
+
+(defn f2015-1a-alternative [in]
+    (let [dirs (map direction in)]
+      (apply + dirs))
+  )
+
+(defn f2015-1b [in]
+  )
+
 
 (f2015-1a 0 input-2015-1)
 
@@ -23,3 +30,4 @@
   "I don't do a whole lot ... yet."
   [& args]
   (println "Hello, World!"))
+
