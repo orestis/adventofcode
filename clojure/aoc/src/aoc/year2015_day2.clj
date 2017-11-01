@@ -11,42 +11,32 @@
         m (min a b c)]
     (+ a b c (/ m 2))))
 
-#_
-(dimensions 2 3 4)
-#_
-(dimensions 1 1 10)
+#_(dimensions 2 3 4)
+#_(dimensions 1 1 10)
 
 (def lines (clojure.string/split-lines input))
 
 (defn parse [line]
   (map #(Integer. %) (clojure.string/split line #"x")))
 
-#_
-(parse "1x2x3")
+#_(parse "1x2x3")
 
 (def solutionA
   (apply + (map #(apply dimensions (parse %)) lines)))
 
-
 (defn perimeters [l w h]
-  [
-   (+ l l w w)
+  [(+ l l w w)
    (+ l l h h)
-   (+ h h w w)
-   ])
+   (+ h h w w)])
 
-#_
-(perimeters 2 3 4)
-#_
-(perimeters 1 1 10)
+#_(perimeters 2 3 4)
+#_(perimeters 1 1 10)
 
 (defn volume [l w h]
   (* l w h))
 
-#_
-(volume 2 3 4)
-#_
-(volume 1 1 10)
+#_(volume 2 3 4)
+#_(volume 1 1 10)
 
 (defn ribbon [l w h]
   (+ (apply min (perimeters l w h)) (volume l w h)))
