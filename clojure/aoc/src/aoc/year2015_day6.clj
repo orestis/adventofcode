@@ -79,27 +79,35 @@
 (defn off-fn [_ v] v)
 (defn toggle-fn [v _] (if (= v :on) :off :on))
 
-(defn expand-instruction [inst]
+(defn op->update-fn-a [op]
+  (case op
+    :on on-fn
+    :off off-fn
+    :toggle toggle-fn))
+
+(defn expand-instruction
+  ([inst]
+   (expand-instruction inst op->update-fn-a))
+  ([inst op-fn]
   (let [{:keys [op from to]} inst
-        update-fn (case op
-                    :on on-fn
-                    :off off-fn
-                    :toggle toggle-fn)
+        update-fn (op-fn op)
         to-update
         (for [x (range (first from) (+ 1 (first to)))
               y (range (second from) (+ 1 (second to)))]
           [x y])]
     [to-update update-fn op]
-    ))
+    )))
 
 (expand-instruction {:op :on, :from [1 2], :to [3, 4]})
 
 
 (defn apply-instruction
-  [lights inst]
+  ([lights inst]
+   (apply-instruction op->update-fn-a lights inst))
+  ([op-fn lights inst]
   (println "applying instru" inst)
-  (let [[ops fn val] (expand-instruction inst)]
-    (reduce #(update %1 %2 fn val) lights ops)))
+  (let [[ops fn val] (expand-instruction inst op-fn)]
+    (reduce #(update %1 %2 fn val) lights ops))))
 
 (defn count-lit [lights]
   (count (filter #(= % :on) (vals lights))))
@@ -117,3 +125,58 @@
 ;; Your puzzle answer was 377891.
 (count-lit solution-lights)
 
+
+;; --- Part Two ---
+
+;; You just finish implementing your winning light pattern when you realize you
+;; mistranslated Santa's message from Ancient Nordic Elvish.
+
+;; The light grid you bought actually has individual brightness controls; each
+;; light can have a brightness of zero or more. The lights all start at zero.
+
+;; The phrase turn on actually means that you should increase the brightness of
+;; those lights by 1.
+
+;; The phrase turn off actually means that you should decrease the brightness of
+;; those lights by 1, to a minimum of zero.
+
+;; The phrase toggle actually means that you should increase the brightness of
+;; those lights by 2.
+
+;; What is the total brightness of all lights combined after following Santa's
+;; instructions?
+
+;; For example:
+
+;; turn on 0,0 through 0,0 would increase the total brightness by 1. toggle 0,0
+;; through 999,999 would increase the total brightness by 2000000.
+
+
+(defn initial-lights-b [w h]
+  (let [l (for [x (range w) y (range h)] [x y])]
+    (zipmap l (repeat 0))
+    ))
+
+(defn total-brightness [lights]
+  (apply + (vals lights)))
+
+(total-brightness (initial-lights-b 10 10))
+
+(total-brightness (apply-instruction op->update-fn-b (initial-lights-b 10 10) {:op :on :from [1 2], :to [3 4]}))
+
+(defn op->update-fn-b [op]
+  (case op
+    :on (fn [curr _] (inc curr))
+    :off (fn [curr _] (max 0 (dec curr)))
+    :toggle (fn [curr _] (+ curr 2))))
+
+(def test-lights
+  (reduce (partial apply-instruction op->update-fn-b) (initial-lights-b 1000 1000) (take 10 instructions)))
+
+(total-brightness test-lights)
+
+(def solution-lights
+  (reduce (partial  apply-instruction op->update-fn-b) (initial-lights-b 1000 1000) instructions))
+
+;; Your puzzle answer was 377891.
+(total-brightness solution-lights)
