@@ -3,7 +3,7 @@
   (:require [clojure.java.io :as io])
   (:require [clojure.string :as str]))
 
-(def input
+(defonce input
   (-> "2015/day7.txt" io/resource slurp str/split-lines))
 
 
@@ -36,9 +36,53 @@
 ;; languages (for example, C, JavaScript, or Python) provide operators for these
 ;; gates.
 
+(defn parse-line [line]
+  (let [[left right] (str/split line #" -> ")]
+    [left (keyword right)]))
+
+(deftest parse-line-test
+  (is (= (parse-line "something -> else") ["something" :else])))
+
+(defn convert-binary [left]
+  (let [ops (str/split left #" ")
+        shifted-ops
+        (if (= 3 (count ops))
+          [(nth ops 1) (nth ops 0) (nth ops 2)]
+          ops)]
+    (str/join " " shifted-ops)))
+
+(deftest convert-binary-test
+  (is (= (convert-binary "x AND y") "AND x y")))
+
+(defn parse-left [left]
+  (read-string (str "(" left ")")))
+
+(def AND bit-and)
+(def OR bit-or)
+(def NOT bit-not)
+(def LSHIFT bit-shift-left)
+(def RSHIFT bit-shift-right)
+
+(RSHIFT 23 5)
+
+
+(defn parse-gate [line]
+  (let [fn (cond
+              (str/includes? line "AND") bit-and
+              (str/includes? line "OR") bit-or
+              (str/includes? line "NOT") bit-not
+              (str/includes? line "LSHIFT") bit-shift-left
+              (str/includes? line "RSHIFT") bit-shift-right
+              :else identity
+              )
+        
+        ]))
 
 (defn parse-circuit [lines]
   lines)
+
+(defn execute-circuit [circuit]
+  {})
 
 ;; For example, here is a simple circuit:
 
@@ -64,11 +108,11 @@
 :x 123
 :y 456})
 
-(defn execute-circuit [circuit]
-{})
-
 (deftest sample-circuit
   (is (= test-results (execute-circuit test-circuit))))
+
+(deftest real-circuit
+  (is (= 956 (:a (execute-circuit (parse-circuit input))))))
 
 ;; In little Bobby's kit's instructions booklet (provided as your puzzle input),
 ;; what signal is ultimately provided to wire a?
