@@ -6,7 +6,6 @@
 (defonce input
   (-> "2015/day7.txt" io/resource slurp str/split-lines))
 
-
 ;; --- Day 7: Some Assembly Required ---
 
 ;; This year, Santa brought little Bobby Tables a set of wires and bitwise logic
@@ -40,22 +39,21 @@
   (let [[left right] (str/split line #" -> ")]
     [left (keyword right)]))
 
+(parse-line "b -> a")
+
 (deftest parse-line-test
   (is (= (parse-line "something -> else") ["something" :else])))
 
 (defn convert-binary [left]
   (let [ops (str/split left #" ")
         shifted-ops
-        (if (= 3 (count ops))
-          [(nth ops 1) (nth ops 0) (nth ops 2)]
-          ops)]
-    (str/join " " shifted-ops)))
+        (cond (= 3 (count ops))
+              [(nth ops 1) (nth ops 0) (nth ops 2)]
+          :else ops)]
+    shifted-ops))
 
 (deftest convert-binary-test
-  (is (= (convert-binary "x AND y") "AND x y")))
-
-(defn parse-left [left]
-  (read-string (str "(" left ")")))
+  (is (= (convert-binary "x AND y") ["AND" "x" "y"])))
 
 (def AND bit-and)
 (def OR bit-or)
@@ -63,60 +61,131 @@
 (def LSHIFT bit-shift-left)
 (def RSHIFT bit-shift-right)
 
-(RSHIFT 23 5)
+(def funs {"AND" AND "OR" OR "NOT" #(+ 65536 (bit-not %)) "LSHIFT" LSHIFT "RSHIFT" RSHIFT})
+
+(defn parse-int [i]
+  (try (Integer/parseInt i)
+       (catch NumberFormatException _ nil)))
+
+(defn keyword-if-needed [v]
+  (if-let [i (parse-int v)] i
+      (keyword v)))
 
 
-(defn parse-gate [line]
-  (let [fn (cond
-              (str/includes? line "AND") bit-and
-              (str/includes? line "OR") bit-or
-              (str/includes? line "NOT") bit-not
-              (str/includes? line "LSHIFT") bit-shift-left
-              (str/includes? line "RSHIFT") bit-shift-right
-              :else identity
-              )
-        
-        ]))
 
-(defn parse-circuit [lines]
-  lines)
+(defn parse-left [left]
+  (let [f (first left)
+        args (rest left)
+        keywords (map keyword-if-needed args)
+        all (concat [(get funs f (keyword f))] keywords)]
 
-(defn execute-circuit [circuit]
-  {})
+    (seq all)))
+    ;;(read-string (str "(" (list all) ")"))))
+
+(parse-left ["AND" "x" "y"])
+(parse-left ["LSHIFT" "x" "2"])
+(parse-left ["a"])
+
 
 ;; For example, here is a simple circuit:
 
-(def test-circuit
-(parse-circuit ["123 -> x"
-"456 -> y"
-"x AND y -> d"
-"x OR y -> e"
-"x LSHIFT 2 -> f"
-"y RSHIFT 2 -> g"
-"NOT x -> h"
-"NOT y -> i"]))
+
+(def sample-circuit ["123 -> x"
+                     "456 -> y"
+                     "x AND y -> d"
+                     "x OR y -> e"
+                     "x LSHIFT 2 -> f"
+                     "y RSHIFT 2 -> g"
+                     "NOT x -> h"
+                     "NOT y -> i"])
 
 ;; After it is run, these are the signals on the wires:
 
 (def test-results
-{:d 72
-:e 507
-:f 492
-:g 114
-:h 65412
-:i 65079
-:x 123
-:y 456})
+  {:d 72
+   :e 507
+   :f 492
+   :g 114
+   :h 65412
+   :i 65079
+   :x 123
+   :y 456})
 
-(deftest sample-circuit
-  (is (= test-results (execute-circuit test-circuit))))
 
-(deftest real-circuit
-  (is (= 956 (:a (execute-circuit (parse-circuit input))))))
+(parse-int "123")
+(parse-int "x AND y")
+
+(defn left->expr [input]
+  (if-let [v (parse-int input)] v (parse-left (convert-binary input))))
+
+(defn line->expr [line]
+  (let [[left right] (parse-line line)]
+    {right (left->expr left)}))
+
+(line->expr "x AND y -> d")
+(line->expr "x AND y -> d")
+
+
+(defn lookup [circuit key]
+  (let [v (get circuit key)]
+    (println "key " key "has val" v)
+    (cond
+      (integer? v) v
+      :else (nested-lookup circuit v)
+    )))
+
+(def lookup-memo (memoize lookup))
+
+(defn lookup-or-val [circuit key-or-val]
+  (if (integer? key-or-val) key-or-val
+      (lookup-memo circuit key-or-val)))
+
+(defn nested-lookup [circuit v]
+  (println "v" v)
+  (let [f (first v)
+        args (rest v)
+        resolved (mapv #(lookup-or-val circuit %) args)
+        result (apply f resolved)]
+    (println  "    results in" result)
+    result
+    ))
+
+(defn parse-circuit [lines]
+  (into {} (map line->expr lines)))
+
+(lookup (parse-circuit sample-circuit) :x)
+(lookup (parse-circuit sample-circuit) :y)
+(lookup (parse-circuit sample-circuit) :h)
+(lookup (parse-circuit sample-circuit) :e)
+(lookup (parse-circuit sample-circuit) :f)
+(nested-lookup (parse-circuit sample-circuit) [bit-not :x])
+
+
+(defn execute-circuit [circuit keys]
+  (zipmap keys (map (partial lookup-memo circuit) keys)))
+
+(execute-circuit (parse-circuit sample-circuit) [:x :y :d :e :h :i :f :g :h :i])
+
+(execute-circuit (parse-circuit input) [:lx])
+
+(deftest sample-circuit-test
+  (is (= test-results (execute-circuit (parse-circuit sample-circuit) [:x :y :d :e :f :g :h :i]))))
+
+(deftest real-circuit-test
+  (is (= 956 :a (execute-circuit (parse-circuit input) [:a]))))
 
 ;; In little Bobby's kit's instructions booklet (provided as your puzzle input),
 ;; what signal is ultimately provided to wire a?
 
 ;; Your puzzle answer was 956.
+
+
+;; Now, take the signal you got on wire a, override wire b to that signal, and reset the other wires (including wire a). What new signal is ultimately provided to wire a?
+
+(def patched-circuit (assoc (parse-circuit input) :b 956))
+(execute-circuit patched-circuit [:lx])
+;; Your puzzle answer was 40149.
+
+
 
 (run-all-tests #"aoc\.year2015-day7")
