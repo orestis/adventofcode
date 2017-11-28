@@ -93,7 +93,7 @@
 
 (with-test
   (defn next-password [p]
-    (let [stream (iterate inc-password p)
+    (let [stream (rest (iterate inc-password p))
           valid (filter valid? stream)]
       (first valid)))
   (testing "next"
@@ -112,5 +112,13 @@
 ;; Your puzzle answer was vzbxxyzz.
 
 (next-password input)
+
+;; --- Part Two ---
+
+;; Santa's password expired again. What's the next one?
+
+(next-password (next-password input))
+
+;; Your puzzle answer was vzcaabcc.
 
 (run-all-tests #"aoc\.year2015-day11")
