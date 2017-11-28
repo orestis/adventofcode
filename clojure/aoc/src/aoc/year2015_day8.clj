@@ -36,11 +36,6 @@
 ;;     hexadecimal notation.
 
 
-(re-seq #"\\x\d\d" "\"hello\\x27som\\x12et\\\"hing\"")
-(str/replace "\"hello\\x27som\\x12et\\\"hing\"" #"(\\x\d\d)" ".")
-(str/replace "\"hello\\x27s\\\\om\\x12et\\\"hing\"" #"(\\\\)" ".")
-(str/replace "\"hello\\x27som\\x12et\\\"hing\"" #"(\\\")" ".")
-
 (with-test
   (defn charcount [s]
     (-> s
@@ -102,11 +97,40 @@
 ;; "\"aaa\\\"aaa\"", an increase from 10 characters to 16. "\x27" encodes to
 ;; "\"\\x27\"", an increase from 6 characters to 11.
 
+(str/replace "\"\"" #"\"" "..")
+(str/replace "\"abc\"" #"\"" "..")
+(str/replace "\"aaa\\\"aaa" #"(\")|(\\)" "..")
+(str/replace "\"\\x27\"" #"(\")|(\\)" "..")
+
+(with-test
+  (defn enccount [s]
+    (-> s
+        (str/replace #"(\")|(\\)" "..")
+        count
+        inc
+        inc))
+  (testing "Encode Count"
+    (doseq [[s c cc] [
+                      ["\"\"" 6 2]
+                      ["\"abc\"" 9 5]
+                      ["\"aaa\\\"aaa\"" 16 10]
+                      ["\"\\x27\"" 11 6]
+                      ]]
+      (testing (str "enc " s)
+        (is (= c (enccount s))))
+      (testing (str "code " s)
+        (is (= cc (count s)))))))
+
 ;; Your task is to find the total number of characters to represent the newly
 ;; encoded strings minus the number of characters of code in each original string
 ;; literal. For example, for the strings above, the total encoded length (6 + 9 +
 ;; 16 + 11 = 42) minus the characters in the original code representation (23, just
 ;; like in the first part of this puzzle) is 42 - 23 = 19.
+
+(defn diff2 [s]
+  (- (count s) (enccount s)))
+
+(reduce + (map diff2 input))
 
 ;; Your puzzle answer was 2074.
 
