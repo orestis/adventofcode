@@ -79,3 +79,27 @@
 (shortest-route input-routes)
 
 ;; Your puzzle answer was 141.
+
+;; --- Part Two ---
+
+;; The next year, just to show off, Santa decides to take the route with the
+;; longest distance instead.
+
+;; He can still start and end at any two (different) locations he wants, and he
+;; still must visit each location exactly once.
+
+;; For example, given the distances above, the longest route would be 982 via (for
+;; example) Dublin -> London -> Belfast.
+
+(defn longest-route [m]
+  (let [routes (gen-routes m)
+        m' (with-reverse m)
+        ranked (map #(rank-route % m') routes)
+        longest (apply max ranked)]
+    longest))
+;; What is the distance of the longest route?
+
+(longest-route sample-dists)
+
+(longest-route input-routes)
+;; Your puzzle answer was 736.
