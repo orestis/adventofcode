@@ -1,6 +1,7 @@
 (ns aoc.year2015-day13
   (:use clojure.test)
   (:require [clojure.java.io :as io])
+  (:require [clojure.math.combinatorics :as combo])
   (:require [clojure.string :as str]))
 
 (defonce input
@@ -35,6 +36,15 @@
 "David would lose 7 happiness units by sitting next to Bob."
 "David would gain 41 happiness units by sitting next to Carol."])
 
+(defn parse [line]
+  (let [[_ from diff units to]
+        (re-find #"(\w+) would (gain|lose) (\d+) happiness units by sitting next to (\w+)" line)
+        sign (case diff "gain" 1 "lose" -1)
+        units (* sign (Integer/parseInt units))
+        ]
+    {[(keyword from) (keyword to)] units})
+  )
+
 ;; Then, if you seat Alice next to David, Alice would lose 2 happiness
 ;; units (because David talks so much), but David would gain 46 happiness
 ;; units (because Alice is such a good listener), for a total change of 44.
@@ -50,10 +60,59 @@
 ;; +60    Bob    +54
 ;;      -7  +83
 
+(def sample-pairs (into {} (map parse sample-input)))
+
+(sample-pairs [:Alice :Bob])
+
+(defn happiness [arr hapmap]
+  (let [v (vec arr)
+        cycled (conj v (first v))
+        pairs (partition 2 1 cycled)
+        pairs' (map reverse pairs)
+        cw (map hapmap pairs)
+        ccw (map hapmap pairs')]
+    (reduce + (concat cw ccw))))
+
+(happiness [:David :Alice :Bob :Carol] sample-pairs)
+
 ;; After trying every other seating arrangement in this hypothetical scenario, you
 ;; find that this one is the most optimal, with a total change in happiness of 330.
+
+(defn guests [pairs] (-> pairs keys flatten distinct))
+
+(defn gen-seatings [pairs]
+  (combo/permutations (guests pairs)))
+
+(def input-pairs (into {} (map parse input)))
+
 
 ;; What is the total change in happiness for the optimal seating arrangement of the
 ;; actual guest list?
 
-Your puzzle answer was 618.
+(apply max (map #(happiness % input-pairs) (gen-seatings input-pairs)))
+
+;; Your puzzle answer was 618.
+
+;; --- Part Two ---
+
+;; In all the commotion, you realize that you forgot to seat yourself. At this
+;; point, you're pretty apathetic toward the whole thing, and your happiness
+;; wouldn't really go up or down regardless of who you sit next to. You assume
+;; everyone else would be just as ambivalent about sitting next to you, too.
+
+;; So, add yourself to the list, and give all happiness relationships that involve
+;; you a score of 0.
+
+(take 5 input-pairs)
+
+(def my-pairs 
+  (into {} (for [g (guests input-pairs)] {[g :Orestis] 0 [:Orestis g] 0})))
+
+(def input-pairs-me (merge input-pairs my-pairs))
+
+;; What is the total change in happiness for the optimal seating arrangement that
+;; actually includes yourself?
+
+(apply max (map #(happiness % input-pairs-me) (gen-seatings input-pairs-me)))
+
+;; Your puzzle answer was 601.
