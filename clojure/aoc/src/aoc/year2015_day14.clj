@@ -106,6 +106,24 @@
 ;; first point. Of course, since Dancer had been in the lead for the 139 seconds
 ;; before that, he has accumulated 139 points by the 140th second.
 
+
+(defn points-after [deers t]
+  (let [runs (map run deers)
+        limited (map (partial take t) runs)
+        positions (atom (vec (repeat (count deers) 0)))
+        score (atom (vec (repeat (count deers) 0)))]
+    (loop [race limited]
+      (if (every? seq race)
+        (let [speeds (map first race)]
+          (swap! positions #(mapv + % speeds))
+          (let [furthest (apply max @positions)
+                points-round (mapv #(if (= furthest %) 1 0) @positions)]
+                  (swap! score #(mapv + % points-round))
+                  (recur (map rest race))))
+        @score))))
+
+(points-after sample-deers 1000)
+
 ;; After the 1000th second, Dancer has accumulated 689 points, while poor Comet,
 ;; our old champion, only has 312. So, with the new scoring system, Dancer would
 ;; win (if the race ended at 1000 seconds).
@@ -113,6 +131,7 @@
 ;; Again given the descriptions of each reindeer (in your puzzle input), after
 ;; exactly 2503 seconds, how many points does the winning reindeer have?
 
+(apply max (points-after (map parse input) 2503))
 ;; Your puzzle answer was 1102.
 
 (run-all-tests #"aoc\.year2015-day14")
