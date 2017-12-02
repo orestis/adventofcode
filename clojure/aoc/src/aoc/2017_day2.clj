@@ -93,10 +93,6 @@
   (is (= nil (even-div 2 [5 9 8])))
   (is (= 4 (even-div 8 [5 9 2]))))
 
-(for [n [5 9 2 8]]
-  [n (remove #(= % n) [5 9 2 8])]
-  )
-
 (with-test
   (defn row-even-div [row]
     (first (filter integer?
