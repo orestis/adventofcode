@@ -91,7 +91,7 @@
 ;; pollen), while the pomeranians and goldfish readings indicate that there are
 ;; fewer than that many (due to the modial interaction of magnetoreluctance).
 
-(def *exact-instructions* (into #{} (map #(str/split % #": ") [
+(def *exact-instructions* (into {} (map #(str/split % #": ") [
 "children: 3"
 "samoyeds: 2"
 "akitas: 0"
@@ -120,13 +120,26 @@
     (if (nil? v) true ;; if we don't know, we can't assume
         (< (Integer/parseInt v) g))))
 
+(defn not-violates? [aunt instr]
+    (every? identity (map (fn [k] (let
+                     [av (get-in-set (second aunt) k)
+                      v (instr k)]
+                   (or (nil? av) (= av v)))) (keys instr))))
 
-(defn aunt2? [aunt]
-  (clojure.set/superset? *exact-instructions* aunt)
-  )
+(keys *exact-instructions*)
+(first aunts)
+(not-violates? (first aunts) *exact-instructions*)
+(nth aunts 259)
+(not-violates? (nth aunts 259) *exact-instructions*)
+
 ;; What is the number of the real Aunt Sue?
 
+(defn aunt2? [aunt]
+  (and (greater-than? aunt "cats" 7) (greater-than? aunt "trees" 3) (less-than? aunt "goldfish" 5) (less-than? aunt "pomeranians" 3) (not-violates? aunt *exact-instructions*)))
+
+
 (filter aunt2? aunts)
+;; => (["260" #{("samoyeds" "2") ("goldfish" "0") ("vizslas" "0")}])
 
 ;; Your puzzle answer was 260.
 
