@@ -63,4 +63,32 @@
 (jump (mapv #(Integer/parseInt %) input))
 ;; => 372139
 
+;; --- Part Two ---
+
+;; Now, the jumps are even stranger: after each jump, if the offset was three or
+;; more, instead decrease it by 1. Otherwise, increase it by 1 as before.
+
+(defn jump2
+  ([instr] (jump2 instr 0 0))
+  ([instr n c]
+   (if (>= n (count instr)) c
+       (let [i (nth instr n)
+             n' (+ n i)
+             i' (if (>= i 3) (dec i) (inc i))
+             instr' (assoc instr n i')]
+         (recur instr' n' (inc c))))
+   ))
+
+
+;; Using this rule with the above example, the process now takes 10 steps, and
+;; the offset values after finding the exit are left as 2 3 2 3 -1.
+
+(jump2 sample-instr)
+;; => 10
+
+;; How many steps does it now take to reach the exit?
+(jump2 (mapv #(Integer/parseInt %) input))
+;; => 29629538
+
+
 (run-tests)
