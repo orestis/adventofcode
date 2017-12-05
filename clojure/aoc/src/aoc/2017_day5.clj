@@ -87,8 +87,44 @@
 ;; => 10
 
 ;; How many steps does it now take to reach the exit?
-(jump2 (mapv #(Integer/parseInt %) input))
+(time 
+(jump2 (mapv #(Integer/parseInt %) input)))
+;; 23169 msecs
 ;; => 29629538
 
+(defn jump2i
+  [instructions]
+   (let [^ints instr (int-array instructions) bounds (alength instr)]
+     (loop [n 0 c 0]
+       (if (>= n bounds) c
+           (let [i (aget instr n)
+                 n' (+ n i)
+                 i' (if (>= i 3) (dec i) (inc i))]
+             (aset instr n i')
+             (recur n' (inc c)))))))
 
-(run-tests)
+
+(set! *warn-on-reflection* true)
+(jump2i (int-array sample-instr))
+(time
+ (jump2i (mapv #(Integer/parseInt %) input)))
+;; => 29629538
+;;  380ms
+
+;; from @val_waeselynck
+(defn run2
+  [offsets]
+  (let [^ints offsets (into-array Integer/TYPE offsets)]
+    (loop [i 0
+           t 0]
+      (if (and (<= (int 0) i) (< i (alength offsets)))
+        (let [o (aget offsets i)]
+          (aset offsets i
+                (if (> o (int 2))
+                  (dec o)
+                  (inc o)))
+          (recur (+ i o) (inc t)))
+        t))))
+(time
+ (run2 (mapv #(Integer/parseInt %) input)))
+;; 650ms
