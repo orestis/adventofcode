@@ -128,3 +128,54 @@
 (time
  (run2 (mapv #(Integer/parseInt %) input)))
 ;; 650ms
+
+(set! *unchecked-math* :warn-on-boxed)
+
+;; from @borkdude
+(defn part-2-array [input]
+  (let [^ints maze
+        (int-array input)
+        length (alength maze)]
+    (loop [cur-pos 0
+           steps 0]
+      (if-let [^int cur-val
+               (and (< cur-pos
+                       length)
+                    (aget maze cur-pos))]
+        (do (aset maze
+                  cur-pos
+                  (if (>= cur-val 3)
+                    (dec cur-val)
+                    (inc cur-val)))
+            (recur (+ cur-pos cur-val) (inc steps)))
+        steps))))
+
+(time
+ (part-2-array (mapv #(Integer/parseInt %) input)))
+;; 1000ms
+
+
+;; from @borkdude
+(defn part-2-array-2 [input]
+  (let [^ints maze
+        (int-array input)
+        length ^int (alength maze)]
+    (loop [maze maze
+           cur-pos 0
+           steps 0]
+      (if-let [^int cur-val
+               (and (< cur-pos
+                       length)
+                    (aget maze cur-pos))]
+        (recur (doto maze
+                 (aset
+                  cur-pos
+                  (if (>= cur-val 3)
+                    (dec cur-val)
+                    (inc cur-val))))
+               (+ cur-pos cur-val)
+               (inc steps))
+        steps))))
+
+(time
+ (part-2-array-2 (mapv #(Integer/parseInt %) input)))
