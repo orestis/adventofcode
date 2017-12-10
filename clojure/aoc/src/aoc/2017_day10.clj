@@ -39,11 +39,6 @@
 ;; position moves past the end of the list, it wraps around to the front.
 ;; Lengths larger than the size of the list are invalid.
 
-[0 1 2 3 4] ;; l
-[2 1 0] ;; r
-[0 1 2] ;; indices
-
-
 (defn hash-knot [coll pos length]
   (loop [t (transient coll)
          r (reverse (take length (drop pos (cycle coll))))
@@ -176,8 +171,6 @@
 
 ;; Perform this operation on each of the sixteen blocks of sixteen numbers in
 ;; your sparse hash to determine the sixteen numbers in your dense hash.
-
-(format "%02X" 64)
 
 ;; Finally, the standard way to represent a Knot Hash is as a single hexadecimal
 ;; string; the final output is the dense hash in hexadecimal notation. Because
