@@ -264,4 +264,5 @@ rcv d" str/split-lines (mapv parse2)))
 
 
 (run-both (mapv parse2 puzzle-input))
+;; => [{:pc 21, :regs {p -290, i 0, a 105, b 105, f 0}, :outbox [], :inbox [], :snd-count 7620, :condition :blocked} {:pc 21, :regs {p -290, i 0, a 105, f 0, b 105}, :outbox [], :inbox [], :snd-count 7493, :condition :blocked}]
 
