@@ -24,14 +24,8 @@
 ;; There aren't that many instructions, so it shouldn't be hard to figure out
 ;; what they do. Here's what you determine:
 
-(declare ^:dynamic *current-program*)
-(def ^:dynamic *part-2* false)
-
 (defn value [regs name-or-int]
     (if (integer? name-or-int) name-or-int (get regs name-or-int 0)))
-
-(binding [*part-2* true *current-program* 0]
-  (value {} "p"))
 
 (ns-unmap *ns* 'dispatch)
 
@@ -199,8 +193,6 @@ rcv d" str/split-lines (mapv parse2)))
   (vec (concat prev cur)))
 
 (defn run-attempt [program start-state cur-prog]
-  (binding [*part-2* true
-            *current-program* cur-prog]
     (println "running program" cur-prog)
     (if (= :terminated (:condition start-state)) start-state
   (loop [state (dissoc start-state :condition)]
@@ -223,7 +215,7 @@ rcv d" str/split-lines (mapv parse2)))
             ;; no recv, continue as normal
             (recur state')))
         (assoc state :condition :terminated) ;; program jumped off, terminate
-        ))))))
+        )))))
 
 (defn deadlocked? [[s1 s2]]
   (let [{cond1 :condition inbox1 :inbox outbox1 :outbox} s1
