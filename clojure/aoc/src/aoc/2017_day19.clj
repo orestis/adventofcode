@@ -96,3 +96,40 @@ F---|----E|--+
 
 (apply str (solve puzzle-input))
 ;; => "SXWAIBUZY"
+
+;; --- Part Two ---
+
+;; The packet is curious how many steps it needs to go.
+
+;; For example, using the same routing diagram from the example above...
+
+;; |          
+;; |  +--+    
+;; A  |  C    
+;; F---|--|-E---+ 
+;; |  |  |  D 
+;; +B-+  +--+ 
+
+;; ...the packet would go:
+
+;; 6 steps down (including the first line at the top of the diagram).
+;; 3 steps right.
+;; 4 steps up.
+;; 3 steps right.
+;; 4 steps down.
+;; 3 steps right.
+;; 2 steps up.
+;; 13 steps left (including the F it stops on).
+
+(defn solve2 [input]
+  (let [[diagram init] (parse input)
+        step-fn (partial step diagram)]
+    (count (last (last (take-while #(not= % :done) (iterate step-fn init)))))))
+
+(solve2 sample-input)
+;; => 38
+
+;; This would result in a total of 38 steps.
+
+;; How many steps does the packet need to go?
+(solve2 puzzle-input)
