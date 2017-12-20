@@ -136,3 +136,20 @@
 
 ;; How many particles are left after all collisions are resolved?
 
+(defn remove-collided [particles]
+  (->> particles
+       (sort-by :p)
+       (partition-by :p)
+       (remove #(> (count %) 1))
+       (apply concat)))
+
+(defn solve2 [particles ticks]
+  (loop [state particles left (count particles) c 1]
+    (let [state' (remove-collided (map tick state))
+          left' (count state')]
+      (println "after" c "ticks, left: " left)
+      (if (= c ticks) left'
+          (recur state' left' (inc c))))))
+
+(solve2 puzzle-input 1000)
+;; => 574
