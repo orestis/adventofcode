@@ -13,7 +13,7 @@
   ))
 
 (def puzzle-input
-  (->> "2017/day21.txt" io/resource slurp str/split-lines (map parse)))
+  (->> "2017/day21.txt" io/resource slurp str/split-lines (mapv parse)))
 
 
 ;; --- Day 21: Fractal Art ---
@@ -152,22 +152,24 @@
                           [3 2 1 0]
                           [1 3 0 2]]
                      9 [
-                          [3 0 1 6 4 2 7 8 5]
                           [6 3 0 7 4 1 8 5 2]
-                          [7 6 3 8 4 0 5 2 1]
                           [8 7 6 5 4 3 2 1 0]
-                          [5 8 7 2 4 6 1 0 3]
                           [2 5 8 1 4 7 0 3 6]
-                        [1 2 5 0 4 8 3 6 7]])]
+                        ])]
     (map #(vec (for [i %] (get pixels i))) new-orders)))
 
 (defn rules->map [rules]
   (into {}
+        (let [permutated
     (apply concat (for [[in out] rules]
       (let [flipped (flip in)
             rotated (rotate in)
-            in-keys (conj rotated flipped in)]
-        (map #(vector % out) in-keys))))))
+            rotated' (rotate flipped)
+            in-keys (vec (concat rotated' (conj rotated flipped in)))]
+        (map #(vector % out) in-keys))))] 
+        (println "distinct?" (distinct? (keys permutated)))
+        permutated
+        )))
 
 
 ;; Suppose the book contained the following two rules:
@@ -227,6 +229,21 @@
 (:pixels sample-1)
 
 (:pixels (tick sample-rulemap sample-1))
+
+(defn count-on-after [rules iterations]
+  (let [state (nth (iterate #(tick rules %) init-pattern) iterations)]
+    (count (remove zero? (:pixels state)))))
+
+(count-on-after sample-rulemap 2)
+;; => 12
+
 ;; Thus, after 2 iterations, the grid contains 12 pixels that are on.
 
+(def puzzle-rulemap (rules->map puzzle-input))
+(count puzzle-rulemap)
 ;; How many pixels stay on after 5 iterations?
+(count-on-after puzzle-rulemap 5)
+;; => 117
+
+(count-on-after puzzle-rulemap 18)
+;; => 2026963
