@@ -165,7 +165,9 @@ while b < c:
     )
   )
 ;; is it number of primes in the (range 107900 124900 17)
+;; actually, the number of non-primes in (range 107900 (inc 124900) 17) (inclusive range)
 
+;; from http://www.mathematical.com/primes0to1000k.html
 (let [primes #{107903,107923,107927,107941,107951,107971,
 107981,107999,108007,108011,108013,108023,108037,108041,108061,108079,
 108089,108107,108109,108127,108131,108139,108161,108179,108187,108191,
